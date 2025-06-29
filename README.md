@@ -53,6 +53,23 @@ This is a customized version of the original AI Meme Generator Agent. Instead of
    streamlit run ai_meme_generator_agent.py
    ```
 
+## Configuration (.env)
+
+You can store your API keys and Imgflip credentials in a .env file to avoid typing them manually every time.
+Create a .env file in the project root:
+
+```markdown
+OPENAI_API_KEY=your-openai-key-here
+ANTHROPIC_API_KEY=your-anthropic-key-here
+IMGFLIP_USERNAME=your-imgflip-username
+IMGFLIP_PASSWORD=your-imgflip-password
+```
+
+Do not commit .env to version control.
+Add it to your .gitignore.
+
+If .env exists, the app will automatically load these credentials as default values in the sidebar.
+
 ## License
 
 This project is licensed under the [Apache License 2.0](./LICENSE), based on the [awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) project.

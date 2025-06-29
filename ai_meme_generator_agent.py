@@ -2,15 +2,17 @@ import asyncio
 import streamlit as st
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-import json
 import requests
 from langchain_core.messages import HumanMessage
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
-
+from dotenv import load_dotenv
+import os
 import logging
 
+
 logging.basicConfig(level=logging.DEBUG)
+load_dotenv()
 
 
 async def generate_meme(
@@ -25,6 +27,12 @@ async def generate_meme(
     else:
         llm = ChatOpenAI(model="gpt-3.5-turbo", api_key=api_key, temperature=0.7)
 
+    # Get list of templates BEFORE generating prompt
+    templates_resp = requests.get("https://api.imgflip.com/get_memes").json()
+    templates = templates_resp["data"]["memes"]
+    template_map = {t["name"].lower(): t["id"] for t in templates}
+    allowed_templates = "\n".join(f"- {t}" for t in sorted(template_map.keys())[:50])
+
     class MemeSchema(BaseModel):
         template_name: str = Field(description="Name of the meme template")
         top_text: str = Field(description="Top caption text")
@@ -34,7 +42,8 @@ async def generate_meme(
     format_instructions = parser.get_format_instructions()
 
     prompt = (
-        f"You are a meme generator. Given a topic '{query}', generate a meme using the official Imgflip API.\n"
+        f"You are a meme generator. Given the topic '{query}', generate a meme using one of the following official Imgflip meme templates ONLY. "
+        f"Do not make up any new template names. Choose strictly from this list:\n{allowed_templates}\n"
         f"Return your output in this format:\n{format_instructions}"
     )
 
@@ -82,7 +91,13 @@ async def generate_meme(
 
 
 def main():
-    # Custom CSS styling
+    # .env file configuration
+    default_claude_key = os.getenv("ANTHROPIC_API_KEY", "")
+    default_openai_key = os.getenv("OPENAI_API_KEY", "")
+    default_imgflip_username = os.getenv("IMGFLIP_USERNAME", "")
+    default_imgflip_password = os.getenv("IMGFLIP_PASSWORD", "")
+    if not default_openai_key:
+        logging.warning("OPENAI_API_KEY not found in .env")
 
     st.title("AI Meme Generator Agent (API-based)")
     st.info(
@@ -104,29 +119,41 @@ def main():
             help="Choose which LLM to use for meme generation",
         )
 
-        # API key input based on model selection
-        api_key = ""
+        # API key input
         if model_choice == "Claude":
             api_key = st.text_input(
                 "Claude API Key",
                 type="password",
+                value=default_claude_key,
                 help="Get your API key from https://console.anthropic.com",
             )
         else:
             api_key = st.text_input(
                 "OpenAI API Key",
                 type="password",
+                value=default_openai_key,
                 help="Get your API key from https://platform.openai.com",
             )
 
         # Imgflip credentials
+        # imgflip_username = st.text_input(
+        #     "Imgflip Username",
+        #     help="Your Imgflip username obtained from Settings",
+        # )
+        # imgflip_password = st.text_input(
+        #     "Imgflip Password",
+        #     type="password",
+        #     help="Your Imgflip password (set in Settings)",
+        # )
         imgflip_username = st.text_input(
             "Imgflip Username",
+            value=default_imgflip_username,
             help="Your Imgflip username obtained from Settings",
         )
         imgflip_password = st.text_input(
             "Imgflip Password",
             type="password",
+            value=default_imgflip_password,
             help="Your Imgflip password (set in Settings)",
         )
 
