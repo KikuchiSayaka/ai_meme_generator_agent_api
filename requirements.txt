@@ -1,0 +1,5 @@
+streamlit>=1.32.0
+langchain-openai>=0.1.13
+langchain-anthropic>=0.1.5
+langchain-core>=0.1.50
+requests>=2.31.0

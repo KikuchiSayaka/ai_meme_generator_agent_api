@@ -1,0 +1,6 @@
+This project is derived from awesome-llm-apps by Shubham Saboo.
+Modifications include:
+
+- Replacement of imgflip browser automation with official Imgflip API
+- Removal of DeepSeek model
+- Updated README and license
