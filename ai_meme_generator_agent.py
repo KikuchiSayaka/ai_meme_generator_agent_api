@@ -135,16 +135,6 @@ def main():
                 help="Get your API key from https://platform.openai.com",
             )
 
-        # Imgflip credentials
-        # imgflip_username = st.text_input(
-        #     "Imgflip Username",
-        #     help="Your Imgflip username obtained from Settings",
-        # )
-        # imgflip_password = st.text_input(
-        #     "Imgflip Password",
-        #     type="password",
-        #     help="Your Imgflip password (set in Settings)",
-        # )
         imgflip_username = st.text_input(
             "Imgflip Username",
             value=default_imgflip_username,
@@ -165,7 +155,7 @@ def main():
 
     query = st.text_input(
         "Meme Idea Input",
-        placeholder="Example: 'A tired cat programmer asking ChatGPT how to fix a bug, again.'",
+        placeholder="Example: 'Frontend vs Backend developers arguing about naming conventions.'",
         label_visibility="collapsed",
     )
 
