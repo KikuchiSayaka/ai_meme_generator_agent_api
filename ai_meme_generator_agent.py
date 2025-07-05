@@ -237,15 +237,28 @@ def main():
                                 f"ℹ️ Template **{template_name}** actually supports **{actual_box_count}** text boxes"
                             )
 
-                        # Display the generated captions
+                        # Display caption selection process
+                        caption_proposals = result.get("caption_proposals", [])
+                        if caption_proposals and len(caption_proposals) >= 2:
+                            with st.expander("🎭 Caption Selection Process"):
+                                st.write("**Option 1:**")
+                                st.write(f"- Top: {caption_proposals[0][0]}")
+                                st.write(f"- Bottom: {caption_proposals[0][1]}")
+                                
+                                st.write("\n**Option 2:**")
+                                st.write(f"- Top: {caption_proposals[1][0]}")
+                                st.write(f"- Bottom: {caption_proposals[1][1]}")
+                                
+                                selected_idx = result.get("selected_caption_index", 0)
+                                reasoning = result.get("selection_reasoning", "")
+                                st.write(f"\n**Selected:** Option {selected_idx + 1}")
+                                st.write(f"**Reasoning:** {reasoning}")
+
+                        # Display the final captions
                         if captions:
-                            st.write("**Generated Captions:**")
-                            for i, caption in enumerate(captions[:actual_box_count]):
-                                st.write(f"Box {i+1}: {caption}")
-                            if len(captions) > actual_box_count:
-                                st.warning(
-                                    f"⚠️ Note: Only the first {actual_box_count} captions were used (template limitation)"
-                                )
+                            st.write("**Final Captions:**")
+                            st.write(f"Top: {captions[0]}")
+                            st.write(f"Bottom: {captions[1]}")
 
                         st.image(
                             meme_url,
