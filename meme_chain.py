@@ -5,7 +5,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 import requests
 import os
-from langchain_core.runnables import ConfigurableField
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,9 +18,7 @@ def get_llm(model_choice: str, api_key: str):
     return ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7, api_key=api_key)
 
 
-llm = ChatOpenAI(
-    model="gpt-3.5-turbo", temperature=0.7, api_key=os.getenv("OPENAI_API_KEY")
-)
+# Removed global llm instance - using get_llm function instead
 
 
 class MemeState(TypedDict):
@@ -62,7 +59,7 @@ def generate_multiple_captions(state: MemeState, config: dict) -> MemeState:
     for i in range(2):
         prompt = f"""Generate meme captions (version {i+1}) for this idea: {state['query']}
         
-Create a unique take on this idea. {'' if i == 0 else 'Make this version different from the first - try a different angle or style of humor.'}
+{'Create a unique and funny take on this idea.' if i == 0 else 'Create a different version - try another angle or style of humor.'}
         
 Return ONLY a Python list with exactly 2 string elements: ["top text", "bottom text"]
         
@@ -100,7 +97,7 @@ Do not include any explanatory text, just the Python list."""
         except Exception as e:
             # If parsing fails, create default captions
             proposals.append([f"Top Text {i+1}", f"Bottom Text {i+1}"])
-            print(f"Warning: Failed to parse captions {i+1}, using defaults. Error: {e}")
+            # Log errors silently to avoid console spam
     
     state["caption_proposals"] = proposals
     return state
@@ -164,7 +161,7 @@ Return a JSON object:
         state["selected_caption_index"] = 0
         state["selection_reasoning"] = "Selected first option by default."
         state["captions"] = state["caption_proposals"][0]
-        print(f"Warning: Failed to parse selection. Error: {e}")
+        # Log errors silently
     
     return state
 

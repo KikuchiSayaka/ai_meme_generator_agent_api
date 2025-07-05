@@ -21,14 +21,10 @@ logging.getLogger("anthropic").setLevel(logging.WARNING)
 load_dotenv()
 
 
-def get_required_box_count(query: str, model_choice: str, api_key: str) -> int:
-    """Always return 2 for standard meme format"""
-    return 2  # Most memes work best with 2 boxes
+# Removed get_required_box_count function - no longer needed since we always use 2 boxes
 
 
-def get_template_selection(
-    query: str, model_choice: str, api_key: str, max_boxes: int = 2
-) -> str:
+def get_template_selection(query: str, model_choice: str, api_key: str) -> str:
     """Get template selection from LLM - only 2-box templates"""
     if model_choice == "Claude":
         llm = ChatAnthropic(model="claude-3-5-sonnet-20241022", api_key=api_key)
@@ -95,7 +91,7 @@ def main():
 
     st.title("AI Meme Generator Agent (API-based)")
     st.info(
-        "This is a customized version of the original AI Meme Generator Agent. Instead of browser automation with imgflip.com, this version uses the **official Imgflip API** for meme generation."
+        "Generate memes using AI! This tool creates multiple caption options and selects the funniest one."
     )
 
     # Sidebar configuration
@@ -166,47 +162,17 @@ def main():
 
         with st.spinner(f"🧠 {model_choice} is analyzing your meme idea..."):
             try:
-                # Always use 2-box templates (standard meme format)
-                required_boxes = 2
-                st.info("📊 Creating standard 2-panel meme")
-
                 # Get template selection (2-box templates only)
-                with st.spinner("🎯 Selecting the best 2-box template..."):
-                    template_name = get_template_selection(
-                        query, model_choice, api_key, max_boxes=2
-                    )
+                with st.spinner("🎯 Selecting the best meme template..."):
+                    template_name = get_template_selection(query, model_choice, api_key)
 
-                    # Verify the selected template actually has enough boxes
-                    templates_resp = requests.get(
-                        "https://api.imgflip.com/get_memes"
-                    ).json()
-                    templates = templates_resp["data"]["memes"]
-                    selected_template = next(
-                        (
-                            t
-                            for t in templates
-                            if t["name"].lower() == template_name.lower()
-                        ),
-                        None,
-                    )
-
-                    if selected_template:
-                        actual_boxes = selected_template["box_count"]
-                        st.info(
-                            f"📋 Selected template: **{template_name}** (has {actual_boxes} text boxes)"
-                        )
-                        if actual_boxes < required_boxes:
-                            st.warning(
-                                f"⚠️ This template only supports {actual_boxes} boxes, but {required_boxes} were requested."
-                            )
-                    else:
-                        st.info(f"📋 Selected template: **{template_name}**")
+                    st.info(f"📋 Selected template: **{template_name}**")
 
                 # Update environment variables for meme_chain
                 os.environ["IMGFLIP_USERNAME"] = imgflip_username
                 os.environ["IMGFLIP_PASSWORD"] = imgflip_password
 
-                with st.spinner(f"🎨 Generating captions for {template_name}..."):
+                with st.spinner("🎨 Generating and evaluating caption options..."):
                     from langchain_core.runnables import RunnableConfig
 
                     config = RunnableConfig(
@@ -226,16 +192,11 @@ def main():
 
                     meme_url = result.get("meme_url")
                     captions = result.get("captions", [])
-                    actual_box_count = result.get("box_count", 0)
 
                     if meme_url:
                         st.success("✅ Meme Generated Successfully!")
 
-                        # Display actual template info
-                        if actual_box_count:
-                            st.info(
-                                f"ℹ️ Template **{template_name}** actually supports **{actual_box_count}** text boxes"
-                            )
+                        # Removed redundant template info display
 
                         # Display caption selection process
                         caption_proposals = result.get("caption_proposals", [])
