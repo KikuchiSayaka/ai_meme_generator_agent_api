@@ -11,14 +11,13 @@ load_dotenv()
 
 
 def get_llm(model_choice: str, api_key: str):
+    """Create LLM instance based on model choice."""
     if model_choice == "Claude":
         from langchain_anthropic import ChatAnthropic
-
         return ChatAnthropic(model="claude-3-5-sonnet-20241022", api_key=api_key)
     return ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7, api_key=api_key)
 
 
-# Removed global llm instance - using get_llm function instead
 
 
 class MemeState(TypedDict):
@@ -33,21 +32,22 @@ class MemeState(TypedDict):
 
 
 def get_template_info(state: MemeState) -> MemeState:
+    """Fetch template information from Imgflip API."""
     template_name = state["template_name"]
-    templates = requests.get("https://api.imgflip.com/get_memes").json()["data"][
-        "memes"
-    ]
+    templates = requests.get("https://api.imgflip.com/get_memes").json()["data"]["memes"]
+    
     match = next(
         (t for t in templates if t["name"].lower() == template_name.lower()), None
     )
     if not match:
         raise ValueError(f"Template '{template_name}' not found")
+    
     state["box_count"] = match["box_count"]
     return state
 
 
 def generate_multiple_captions(state: MemeState, config: dict) -> MemeState:
-    """Generate 2 different caption proposals for the same template"""
+    """Generate 2 different caption proposals for the template."""
     configurable = config.get("configurable", {})
     model_choice = configurable.get("model_choice", "OpenAI")
     api_key = configurable.get("api_key", os.getenv("OPENAI_API_KEY"))
@@ -104,7 +104,7 @@ Do not include any explanatory text, just the Python list."""
 
 
 def select_best_caption(state: MemeState, config: dict) -> MemeState:
-    """Use LLM to select the funniest caption set"""
+    """Use LLM to evaluate and select the funniest caption set."""
     configurable = config.get("configurable", {})
     model_choice = configurable.get("model_choice", "OpenAI")
     api_key = configurable.get("api_key", os.getenv("OPENAI_API_KEY"))
@@ -167,40 +167,54 @@ Return a JSON object:
 
 
 def call_imgflip_api(state: MemeState) -> MemeState:
-    templates = requests.get("https://api.imgflip.com/get_memes").json()["data"][
-        "memes"
-    ]
+    """Generate final meme image using Imgflip API."""
+    templates = requests.get("https://api.imgflip.com/get_memes").json()["data"]["memes"]
+    
     match = next(
         (t for t in templates if t["name"].lower() == state["template_name"].lower()),
         None,
     )
     if not match:
-        raise ValueError(f"Template '{state['template_name']}' not found again")
+        raise ValueError(f"Template '{state['template_name']}' not found")
+    
+    # Prepare API parameters
     params = {
         "template_id": match["id"],
         "username": os.getenv("IMGFLIP_USERNAME"),
         "password": os.getenv("IMGFLIP_PASSWORD"),
     }
+    
+    # Add captions as text parameters
     for i, caption in enumerate(state["captions"]):
         params[f"text{i}"] = caption
+    
+    # Make API call
     res = requests.post("https://api.imgflip.com/caption_image", params=params).json()
+    
     if not res["success"]:
         raise RuntimeError(
-            "Imgflip failed: " + res.get("error_message", "Unknown error")
+            "Imgflip API failed: " + res.get("error_message", "Unknown error")
         )
+    
     state["meme_url"] = res["data"]["url"]
     return state
 
 
-# Define graph with new workflow
+# Define LangGraph workflow
 builder = StateGraph(MemeState)
+
+# Add workflow nodes
 builder.add_node("get_template_info", get_template_info)
 builder.add_node("generate_multiple_captions", generate_multiple_captions)
 builder.add_node("select_best_caption", select_best_caption)
 builder.add_node("call_imgflip_api", call_imgflip_api)
+
+# Define workflow edges
 builder.set_entry_point("get_template_info")
 builder.add_edge("get_template_info", "generate_multiple_captions")
 builder.add_edge("generate_multiple_captions", "select_best_caption")
 builder.add_edge("select_best_caption", "call_imgflip_api")
 builder.add_edge("call_imgflip_api", END)
+
+# Compile the workflow
 meme_chain: Runnable = builder.compile()

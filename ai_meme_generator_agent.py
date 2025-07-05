@@ -21,11 +21,8 @@ logging.getLogger("anthropic").setLevel(logging.WARNING)
 load_dotenv()
 
 
-# Removed get_required_box_count function - no longer needed since we always use 2 boxes
-
-
 def get_template_selection(query: str, model_choice: str, api_key: str) -> str:
-    """Get template selection from LLM - only 2-box templates"""
+    """Select the most appropriate 2-box meme template for the given query."""
     if model_choice == "Claude":
         llm = ChatAnthropic(model="claude-3-5-sonnet-20241022", api_key=api_key)
     else:
@@ -74,27 +71,37 @@ def get_template_selection(query: str, model_choice: str, api_key: str) -> str:
         raise ValueError(f"Failed to parse template selection: {e}")
 
 
-def main():
-    # .env file configuration
-    default_claude_key = os.getenv("ANTHROPIC_API_KEY", "")
-    default_openai_key = os.getenv("OPENAI_API_KEY", "")
-    default_imgflip_username = os.getenv("IMGFLIP_USERNAME", "")
-    default_imgflip_password = os.getenv("IMGFLIP_PASSWORD", "")
-    if not default_openai_key:
+def load_environment_config():
+    """Load configuration from environment variables."""
+    config = {
+        "claude_key": os.getenv("ANTHROPIC_API_KEY", ""),
+        "openai_key": os.getenv("OPENAI_API_KEY", ""),
+        "imgflip_username": os.getenv("IMGFLIP_USERNAME", ""),
+        "imgflip_password": os.getenv("IMGFLIP_PASSWORD", ""),
+    }
+
+    if not config["openai_key"]:
         logging.warning("OPENAI_API_KEY not found in .env")
 
     # Set Imgflip credentials as environment variables for meme_chain
-    if default_imgflip_username:
-        os.environ["IMGFLIP_USERNAME"] = default_imgflip_username
-    if default_imgflip_password:
-        os.environ["IMGFLIP_PASSWORD"] = default_imgflip_password
+    if config["imgflip_username"]:
+        os.environ["IMGFLIP_USERNAME"] = config["imgflip_username"]
+    if config["imgflip_password"]:
+        os.environ["IMGFLIP_PASSWORD"] = config["imgflip_password"]
 
-    st.title("AI Meme Generator Agent (API-based)")
+    return config
+
+
+def setup_page_header():
+    """Set up the main page title and description."""
+    st.title("🤖 AI Meme Generator with LangGraph")
     st.info(
         "Generate memes using AI! This tool creates multiple caption options and selects the funniest one."
     )
 
-    # Sidebar configuration
+
+def create_sidebar(config: dict) -> tuple[str, str, str, str]:
+    """Create sidebar with model selection and API key inputs."""
     with st.sidebar:
         st.markdown(
             '<p class="sidebar-header">⚙️ Model Configuration</p>',
@@ -109,134 +116,194 @@ def main():
             help="Choose which LLM to use for meme generation",
         )
 
-        # API key input
+        # API key input based on model choice
         if model_choice == "Claude":
             api_key = st.text_input(
                 "Claude API Key",
                 type="password",
-                value=default_claude_key,
+                value=config["claude_key"],
                 help="Get your API key from https://console.anthropic.com",
             )
         else:
             api_key = st.text_input(
                 "OpenAI API Key",
                 type="password",
-                value=default_openai_key,
+                value=config["openai_key"],
                 help="Get your API key from https://platform.openai.com",
             )
 
+        # Imgflip credentials
         imgflip_username = st.text_input(
             "Imgflip Username",
-            value=default_imgflip_username,
-            help="Your Imgflip username obtained from Settings",
+            value=config["imgflip_username"],
+            help="Your Imgflip username for meme generation",
         )
         imgflip_password = st.text_input(
             "Imgflip Password",
             type="password",
-            value=default_imgflip_password,
-            help="Your Imgflip password (set in Settings)",
+            value=config["imgflip_password"],
+            help="Your Imgflip password",
         )
 
-    # Main content area
+    return model_choice, api_key, imgflip_username, imgflip_password
+
+
+def get_user_input() -> str:
+    """Get meme idea input from user."""
     st.markdown(
         '<p class="header-text">🎨 Describe Your Meme Concept</p>',
         unsafe_allow_html=True,
     )
 
-    query = st.text_input(
+    return st.text_input(
         "Meme Idea Input",
-        placeholder="Example: 'When the frontend finally fixes a bug... but it's actually a backend issue.'",
+        placeholder="Example: 'When you fix a bug but create three new ones'",
         label_visibility="collapsed",
     )
 
+
+def validate_inputs(
+    api_key: str,
+    query: str,
+    imgflip_username: str,
+    imgflip_password: str,
+    model_choice: str,
+) -> bool:
+    """Validate all required inputs are provided."""
+    if not api_key:
+        st.warning(f"Please provide the {model_choice} API key")
+        return False
+    if not query:
+        st.warning("Please enter a meme idea")
+        return False
+    if not imgflip_username or not imgflip_password:
+        st.warning("Please provide Imgflip credentials")
+        return False
+    return True
+
+
+def display_caption_selection_process(result: dict):
+    """Display the caption selection process in an expandable section."""
+    caption_proposals = result.get("caption_proposals", [])
+    if caption_proposals and len(caption_proposals) >= 2:
+        with st.expander("🎭 Caption Selection Process"):
+            st.write("**Option 1:**")
+            st.write(f"- Top: {caption_proposals[0][0]}")
+            st.write(f"- Bottom: {caption_proposals[0][1]}")
+
+            st.write("\n**Option 2:**")
+            st.write(f"- Top: {caption_proposals[1][0]}")
+            st.write(f"- Bottom: {caption_proposals[1][1]}")
+
+            selected_idx = result.get("selected_caption_index", 0)
+            reasoning = result.get("selection_reasoning", "")
+            st.write(f"\n**Selected:** Option {selected_idx + 1}")
+            st.write(f"**Reasoning:** {reasoning}")
+
+
+def display_final_result(result: dict, meme_url: str):
+    """Display the final meme result with captions and image."""
+    captions = result.get("captions", [])
+
+    st.success("✅ Meme Generated Successfully!")
+
+    # Show caption selection process
+    display_caption_selection_process(result)
+
+    # Display final captions
+    if captions:
+        st.write("**Final Captions:**")
+        st.write(f"Top: {captions[0]}")
+        st.write(f"Bottom: {captions[1]}")
+
+    # Display the meme image
+    st.image(
+        meme_url,
+        caption="Generated Meme Preview",
+        use_container_width=True,
+    )
+
+    # Provide direct link
+    st.markdown(
+        f"""
+        **Direct Link:** [Open in ImgFlip]({meme_url})  
+        **Embed URL:** `{meme_url}`
+    """
+    )
+
+
+def generate_meme_workflow(
+    query: str,
+    model_choice: str,
+    api_key: str,
+    imgflip_username: str,
+    imgflip_password: str,
+):
+    """Execute the complete meme generation workflow."""
+    # Template selection phase
+    with st.spinner("🎯 Selecting the best meme template..."):
+        template_name = get_template_selection(query, model_choice, api_key)
+        st.info(f"📋 Selected template: **{template_name}**")
+
+    # Set environment variables for meme_chain
+    os.environ["IMGFLIP_USERNAME"] = imgflip_username
+    os.environ["IMGFLIP_PASSWORD"] = imgflip_password
+
+    # Caption generation and meme creation phase
+    with st.spinner("🎨 Generating and evaluating caption options..."):
+        from langchain_core.runnables import RunnableConfig
+
+        config = RunnableConfig(
+            configurable={
+                "model_choice": model_choice,
+                "api_key": api_key,
+            }
+        )
+
+        result = meme_chain.invoke(
+            {
+                "query": query,
+                "template_name": template_name,
+            },
+            config=config,
+        )
+
+        meme_url = result.get("meme_url")
+
+        if meme_url:
+            display_final_result(result, meme_url)
+        else:
+            st.error(
+                "❌ Failed to generate meme. Please try again with a different prompt."
+            )
+
+
+def main():
+    """Main application entry point."""
+    # Load environment configuration
+    config = load_environment_config()
+
+    # Set up page
+    setup_page_header()
+
+    # Create sidebar and get user inputs
+    model_choice, api_key, imgflip_username, imgflip_password = create_sidebar(config)
+
+    # Get meme idea from user
+    query = get_user_input()
+
+    # Generate meme when button is clicked
     if st.button("Generate Meme 🚀"):
-        if not api_key:
-            st.warning(f"Please provide the {model_choice} API key")
-            st.stop()
-        if not query:
-            st.warning("Please enter a meme idea")
-            st.stop()
-        if not imgflip_username or not imgflip_password:
-            st.warning("Please provide Imgflip credentials")
+        if not validate_inputs(
+            api_key, query, imgflip_username, imgflip_password, model_choice
+        ):
             st.stop()
 
         with st.spinner(f"🧠 {model_choice} is analyzing your meme idea..."):
             try:
-                # Get template selection (2-box templates only)
-                with st.spinner("🎯 Selecting the best meme template..."):
-                    template_name = get_template_selection(query, model_choice, api_key)
-
-                    st.info(f"📋 Selected template: **{template_name}**")
-
-                # Update environment variables for meme_chain
-                os.environ["IMGFLIP_USERNAME"] = imgflip_username
-                os.environ["IMGFLIP_PASSWORD"] = imgflip_password
-
-                with st.spinner("🎨 Generating and evaluating caption options..."):
-                    from langchain_core.runnables import RunnableConfig
-
-                    config = RunnableConfig(
-                        configurable={
-                            "model_choice": model_choice,
-                            "api_key": api_key,
-                        }
-                    )
-
-                    result = meme_chain.invoke(
-                        {
-                            "query": query,
-                            "template_name": template_name,
-                        },
-                        config=config,
-                    )
-
-                    meme_url = result.get("meme_url")
-                    captions = result.get("captions", [])
-
-                    if meme_url:
-                        st.success("✅ Meme Generated Successfully!")
-
-                        # Removed redundant template info display
-
-                        # Display caption selection process
-                        caption_proposals = result.get("caption_proposals", [])
-                        if caption_proposals and len(caption_proposals) >= 2:
-                            with st.expander("🎭 Caption Selection Process"):
-                                st.write("**Option 1:**")
-                                st.write(f"- Top: {caption_proposals[0][0]}")
-                                st.write(f"- Bottom: {caption_proposals[0][1]}")
-                                
-                                st.write("\n**Option 2:**")
-                                st.write(f"- Top: {caption_proposals[1][0]}")
-                                st.write(f"- Bottom: {caption_proposals[1][1]}")
-                                
-                                selected_idx = result.get("selected_caption_index", 0)
-                                reasoning = result.get("selection_reasoning", "")
-                                st.write(f"\n**Selected:** Option {selected_idx + 1}")
-                                st.write(f"**Reasoning:** {reasoning}")
-
-                        # Display the final captions
-                        if captions:
-                            st.write("**Final Captions:**")
-                            st.write(f"Top: {captions[0]}")
-                            st.write(f"Bottom: {captions[1]}")
-
-                        st.image(
-                            meme_url,
-                            caption="Generated Meme Preview",
-                            use_container_width=True,
-                        )
-                        st.markdown(
-                            f"""
-                            **Direct Link:** [Open in ImgFlip]({meme_url})  
-                            **Embed URL:** `{meme_url}`
-                        """
-                        )
-                    else:
-                        st.error(
-                            "❌ Failed to generate meme. Please try again with a different prompt."
-                        )
-
+                generate_meme_workflow(
+                    query, model_choice, api_key, imgflip_username, imgflip_password
+                )
             except Exception as e:
                 st.error(f"Error: {str(e)}")
 
