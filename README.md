@@ -5,65 +5,18 @@
 [![LangChain](https://img.shields.io/badge/🦜🔗-LangChain-green.svg)](https://github.com/langchain-ai/langchain)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white" />
-  <img src="https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white" />
-  <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" />
-  <img src="https://img.shields.io/badge/Anthropic-D4A76A?style=for-the-badge&logo=anthropic&logoColor=white" />
-</p>
-
 > An intelligent meme generator powered by **Streamlit**, **LangChain**, and **LangGraph** that creates multiple caption options and uses AI to select the funniest one!
 
 <div align="center">
   <img src="assets/demo_img.png" alt="AI Meme Generator Demo" width="700">
 </div>
 
-## What Makes This Special?
+## Live Demo
 
-This project showcases the power of modern AI orchestration:
+Try the app here:
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-meme-generator-with-langchain.streamlit.app/)
 
-- ** LangChain** for LLM interactions
-- ** LangGraph** for complex multi-step workflows
-- ** Streamlit** for instant web deployment
-- ** Multi-LLM support** (Claude 3.5 & GPT-3.5)
-
-## Key Features
-
-### **Smart Caption Generation**
-
-- Generates **2 different caption variations** for each meme
-- AI evaluates and selects the funniest option
-- Shows the selection process and reasoning transparently
-
-### **Focused Template Selection**
-
-- Uses only standard 2-box meme templates (top/bottom text)
-- AI selects the most appropriate template for your idea
-- Works with 30+ popular meme formats
-
-### **Multi-LLM Support**
-
-- **Claude 3.5 Sonnet** (Anthropic) - Recommended for best results
-- **GPT-3.5 Turbo** (OpenAI) - Fast and cost-effective
-- Easy to extend with other models
-
-### **LangGraph Workflow**
-
-- Orchestrated multi-step process:
-  1. Template selection
-  2. Multiple caption generation
-  3. AI-based humor evaluation
-  4. Final meme creation
-- Clean separation of concerns with state management
-
-### **User Interface**
-
-- Built with Streamlit for easy interaction
-- Live preview of generated memes
-- Expandable view to see caption selection process
-- Simple API key management
-
-## 🔧 Required API Keys
+## Required API Keys
 
 1. **[OpenAI](https://platform.openai.com/account/api-keys)** or **[Anthropic](https://console.anthropic.com/settings/keys)**
    - For AI-powered caption generation and selection
@@ -108,14 +61,6 @@ This project showcases the power of modern AI orchestration:
    - Enter your API keys in the sidebar (if not using .env)
    - Type your meme idea and click "Generate Meme 🚀"
 
-## How It Works
-
-1. **Input your idea**: Describe the meme concept you want to create
-2. **Template Selection**: AI analyzes your idea and selects the best meme template
-3. **Caption Generation**: Creates 2 different caption variations
-4. **Humor Evaluation**: AI evaluates both options and selects the funniest
-5. **Meme Creation**: Generates the final meme using Imgflip API
-
 ### Example Workflow
 
 ```
@@ -149,13 +94,13 @@ Final meme created!
 ### Architecture Highlights
 
 ```
-📱 Streamlit UI
+Streamlit UI
     ↓
-🔀 LangGraph Orchestration
+LangGraph Orchestration
     ↓
-🦜 LangChain LLM Calls → Multiple AI Models
+LangChain LLM Calls → Multiple AI Models
     ↓
-🎨 Imgflip API → Final Meme
+Imgflip API → Final Meme
 ```
 
 ## Security Notes
@@ -164,10 +109,6 @@ Final meme created!
 - `.env` file is gitignored by default
 - All API calls use HTTPS
 - No browser automation or scraping
-
-## Topics
-
-`streamlit` `langchain` `langgraph` `llm` `ai` `meme-generator` `claude` `gpt` `python` `ai-application` `prompt-engineering` `workflow-orchestration`
 
 ## License
 
@@ -181,3 +122,10 @@ Contributions are welcome! Feel free to:
 - Improve caption generation prompts
 - Enhance the UI/UX
 - Add new features
+
+<details>
+  <summary>Keywords</summary>
+
+`streamlit`, `langchain`, `langgraph`, `llm`, `ai`, `meme-generator`, `claude`, `gpt`, `python`, `prompt-engineering`, `workflow-orchestration`
+
+</details>
