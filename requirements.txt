@@ -4,4 +4,5 @@ langchain-anthropic>=0.1.5
 langchain-core>=0.1.50
 requests>=2.31.0
 python-dotenv>=1.1.1
+langchain>=0.1.16
 langgraph>=0.0.25
